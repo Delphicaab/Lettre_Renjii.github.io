@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lettre Enchantée</title>
+  <link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=Cinzel+Decorative:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --env-light: #d4a85a;
+      --env-mid:   #b8883a;
+      --env-dark:  #7a5020;
+      --ink:       #2a1a06;
+      --wax:       #8b1a0e;
+      --wax-light: #c43020;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      display: flex; align-items: center; justify-content: center;
+      background: radial-gradient(ellipse at 40% 30%, #1a0e04 0%, #0d0703 60%, #000 100%);
+      font-family: 'IM Fell English', serif;
+      overflow: hidden;
+    }
+
+    .dust { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 0; }
+    .dust-particle {
+      position: absolute; width: 2px; height: 2px; border-radius: 50%;
+      background: rgba(255,210,120,0.55);
+      animation: floatDust linear infinite;
+    }
+    @keyframes floatDust {
+      0%   { transform: translateY(100vh) translateX(0); opacity: 0; }
+      10%  { opacity: 0.6; }
+      90%  { opacity: 0.4; }
+      100% { transform: translateY(-10vh) translateX(var(--drift)); opacity: 0; }
+    }
+
+    .scene {
+      position: relative; z-index: 1;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      perspective: 1200px;
+    }
+
+    .envelope-container {
+      position: relative;
+      width: 560px;
+      height: 380px;
+      cursor: default;
+      animation: gentleFloat 6s ease-in-out infinite;
+      transform-style: preserve-3d;
+    }
+
+    @keyframes gentleFloat {
+      0%,100% { transform: translateY(0px) rotate(-0.4deg); }
+      50%      { transform: translateY(-12px) rotate(0.4deg); }
+    }
+
+    .envelope-body {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(160deg, var(--env-light) 0%, var(--env-mid) 50%, var(--env-dark) 100%);
+      border-radius: 6px 6px 18px 18px;
+      box-shadow:
+        0 30px 80px rgba(0,0,0,0.65),
+        inset 0 1px 0 rgba(255,220,150,0.3),
+        inset 0 -3px 10px rgba(0,0,0,0.2);
+      overflow: hidden;
+    }
+
+    .envelope-body::before {
+      content: '';
+      position: absolute; inset: 0;
+      background:
+        linear-gradient(135deg, transparent 49.5%, rgba(0,0,0,0.13) 49.5%, rgba(0,0,0,0.13) 50.5%, transparent 50.5%),
+        linear-gradient(225deg, transparent 49.5%, rgba(0,0,0,0.13) 49.5%, rgba(0,0,0,0.13) 50.5%, transparent 50.5%);
+      pointer-events: none;
+    }
+
+    .envelope-flap {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 54%;
+      background: linear-gradient(175deg, #f0d080 0%, #d09840 60%, var(--env-mid) 100%);
+      clip-path: polygon(0 0, 100% 0, 51% 100%);
+      transform-origin: top center;
+      transform: rotateX(0deg);
+      transition: transform 0.95s cubic-bezier(0.4, 0, 0.2, 1);
+      transform-style: preserve-3d;
+      backface-visibility: visible;
+      z-index: 6;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.22);
+    }
+
+    .envelope-address {
+      position: absolute;
+      top: 30px;
+      left: 50%;
+      transform: translateX(-50%) rotate(0deg);
+      width: calc(100% - 40px);
+      font-family: 'Cinzel Decorative', serif;
+      font-size: 1rem;
+      color: rgba(26, 13, 3, 0.92);
+      font-style: italic;
+      letter-spacing: 0.04em;
+      text-align: center;
+      z-index: 7;
+      text-shadow: 0 1px 0 rgba(255,255,255,0.25);
+      transform-style: preserve-3d;
+      backface-visibility: hidden;
+    }
+    .envelope-flap::after {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(180deg, rgba(255,255,255,0.22) 0%, transparent 45%);
+      clip-path: polygon(0 0, 100% 0, 51% 100%);
+      pointer-events: none;
+    }
+
+    .wax-seal {
+      position: absolute;
+      top: calc(54% - 38px);
+      left: 50%;
+      transform: translateX(-50%);
+      width: 76px; height: 76px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 30%, var(--wax-light) 0%, var(--wax) 50%, #4a0e06 100%);
+      box-shadow:
+        0 0 0 4px rgba(255,180,100,0.25),
+        0 8px 24px rgba(0,0,0,0.55),
+        inset 0 2px 5px rgba(255,150,80,0.3);
+      z-index: 10;
+      cursor: pointer;
+      transition: transform 0.25s, box-shadow 0.25s, opacity 0.4s;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .wax-seal:hover {
+      transform: translateX(-50%) scale(1.1);
+      box-shadow: 0 0 0 6px rgba(255,180,100,0.35), 0 10px 28px rgba(0,0,0,0.65), inset 0 2px 5px rgba(255,150,80,0.3);
+    }
+    .wax-seal.broken {
+      opacity: 0;
+      pointer-events: none;
+      transform: translateX(-50%) scale(1.6) rotate(20deg);
+    }
+    .wax-seal .hint {
+      position: absolute;
+      bottom: -28px; left: 50%;
+      transform: translateX(-50%);
+      white-space: nowrap;
+      font-size: 0.65rem; letter-spacing: 0.1em;
+      color: rgba(255,200,100,0.75);
+      transition: opacity 0.4s;
+      font-family: 'IM Fell English', serif;
+      font-style: italic;
+    }
+
+    .letter-wrapper {
+      position: absolute;
+      top: 0; left: 8%;
+      width: 84%;
+      height: 82%;
+      z-index: 4;
+      overflow: hidden;
+      pointer-events: none;
+    }
+    .letter-inside {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 95%;
+      background: linear-gradient(160deg, #fdf0cb 0%, #f5e0a0 30%, #ebce84 65%, #dfc078 100%);
+      border-radius: 0 0 16px 16px;
+      transform: translateY(-100%);
+      transition: transform 0s;
+    }
+
+    .letter-expanded {
+      position: fixed; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      z-index: 100;
+      pointer-events: none;
+      opacity: 0;
+    }
+    .letter-expanded.visible { pointer-events: auto; opacity: 1; }
+
+    .letter-backdrop {
+      position: absolute; inset: 0;
+      background: rgba(0,0,0,0);
+      transition: background 0.7s ease;
+      cursor: pointer;
+    }
+    .letter-expanded.visible .letter-backdrop { background: rgba(0,0,0,0.78); }
+
+    .letter-paper {
+      position: relative; z-index: 101;
+      width: min(680px, 90vw);
+      min-height: 520px;
+      max-height: 86vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transform: scale(0.12) translateY(60vh);
+      opacity: 0;
+      transition: transform 0.9s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.5s ease;
+    }
+    .letter-expanded.visible .letter-paper {
+      transform: scale(1) translateY(0);
+      opacity: 1;
+    }
+
+    .letter-paper-inner {
+      position: relative;
+      flex: 1;
+      padding: 4rem 4.5rem 2.5rem;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      background:
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='400' height='400' filter='url(%23n)' opacity='0.1'/%3E%3C/svg%3E"),
+        linear-gradient(170deg, #fdf3d0 0%, #f2dfa0 25%, #edcf85 60%, #e8c570 85%, #dfc070 100%);
+      clip-path: polygon(
+        0% 1.5%, 1% 0%, 3% 1.2%, 5% 0.2%, 7.5% 1.8%, 10% 0.5%, 13% 1.4%, 16% 0.3%, 19% 1.6%,
+        22% 0.4%, 25% 1.8%, 28% 0.2%, 31% 1.5%, 34% 0%, 37% 1.3%, 40% 0.6%, 43% 1.9%,
+        46% 0.1%, 49% 1.7%, 52% 0.3%, 55% 1.5%, 58% 0.5%, 61% 1.8%, 64% 0.2%, 67% 1.4%,
+        70% 0.4%, 73% 1.6%, 76% 0.1%, 79% 1.8%, 82% 0.5%, 85% 1.3%, 88% 0.2%, 91% 1.7%,
+        94% 0.4%, 97% 1.5%, 100% 0.8%,
+        99.5% 5%, 100% 8%, 99.4% 12%, 100% 16%, 99.5% 20%, 100.2% 25%, 99.6% 30%,
+        100% 35%, 99.5% 40%, 100.1% 45%, 99.6% 50%, 100% 55%, 99.4% 60%, 100.1% 65%,
+        99.6% 70%, 100% 75%, 99.4% 80%, 100% 85%, 99.5% 90%, 100.1% 95%, 99.8% 100%,
+        97% 99.2%, 94% 100%, 91% 98.8%, 88% 100%, 85% 99.3%, 82% 100%, 79% 98.7%,
+        76% 100%, 73% 99.2%, 70% 100%, 67% 98.8%, 64% 100%, 61% 99.1%, 58% 100%,
+        55% 98.9%, 52% 100%, 49% 99.3%, 46% 100%, 43% 98.7%, 40% 100%, 37% 99.2%,
+        34% 100%, 31% 98.8%, 28% 100%, 25% 99.3%, 22% 100%, 19% 98.7%, 16% 100%,
+        13% 99.2%, 10% 100%, 7.5% 98.8%, 5% 100%, 3% 99.4%, 1% 100%, 0% 99%,
+        0.4% 95%, 0% 90%, 0.5% 85%, 0% 80%, 0.4% 75%, 0% 70%, 0.5% 65%,
+        0% 60%, 0.4% 55%, 0% 50%, 0.5% 45%, 0% 40%, 0.4% 35%, 0% 30%,
+        0.5% 25%, 0% 20%, 0.4% 15%, 0% 10%, 0.5% 5%
+      );
+      box-shadow: 0 40px 100px rgba(0,0,0,0.7), inset 0 0 60px rgba(200,150,60,0.12);
+      animation: paperSway 8s ease-in-out infinite;
+    }
+
+    .letter-pages {
+      position: relative;
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+      padding-right: 1rem;
+      padding-bottom: 1rem;
+    }
+    .letter-page {
+      position: absolute; inset: 0;
+      opacity: 0;
+      transform: rotateY(15deg);
+      transform-origin: left center;
+      transition: opacity 0.35s ease, transform 0.35s ease;
+      pointer-events: none;
+      overflow-y: auto;
+      padding-right: 1rem;
+      padding-bottom: 4.5rem;
+      min-height: 0;
+    }
+    .letter-page.active {
+      opacity: 1;
+      transform: rotateY(0deg);
+      pointer-events: auto;
+    }
+    .page-controls {
+      margin-top: 1.6rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-shrink: 0;
+      z-index: 2;
+    }
+    .page-btn {
+      appearance: none;
+      border: 1px solid rgba(80, 50, 20, 0.35);
+      background: rgba(255, 238, 180, 0.15);
+      color: var(--ink);
+      padding: 0.85rem 1.2rem;
+      border-radius: 999px;
+      cursor: pointer;
+      font-family: 'Cinzel Decorative', serif;
+      font-size: 0.98rem;
+      transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.15);
+    }
+    .page-btn:hover {
+      transform: translateY(-1px);
+      background: rgba(255, 245, 200, 0.28);
+    }
+    .page-label {
+      font-size: 0.95rem;
+      color: rgba(22, 12, 4, 0.85);
+      letter-spacing: 0.08em;
+      font-style: italic;
+    }
+
+    .letter-paper-inner::before {
+      content: '';
+      position: absolute; inset: 0;
+      background-image: repeating-linear-gradient(
+        transparent, transparent 36px,
+        rgba(100,60,10,0.1) 36px, rgba(100,60,10,0.1) 37px
+      );
+      pointer-events: none;
+    }
+    .letter-paper-inner::after {
+      content: '';
+      position: absolute; top: 0; bottom: 0; left: 3.5rem;
+      width: 1px;
+      background: rgba(180,80,60,0.2);
+      pointer-events: none;
+    }
+
+    @keyframes paperSway {
+      0%,100% { transform: rotate(-0.5deg); }
+      50%      { transform: rotate(0.5deg) translateY(-4px); }
+    }
+
+    .letter-date {
+      font-style: italic; font-size: 0.9rem; color: #6b4510;
+      text-align: right; margin-bottom: 2.5rem;
+      opacity: 0; transition: opacity 0.6s ease 0.6s;
+    }
+    .letter-greeting {
+      font-family: 'Cinzel Decorative', serif;
+      font-size: clamp(1.6rem, 3.5vw, 2.8rem);
+      color: var(--ink); margin-bottom: 1.8rem; line-height: 1.3;
+      opacity: 0; transform: translateY(16px);
+      transition: opacity 0.7s ease 0.8s, transform 0.7s ease 0.8s;
+    }
+    .letter-body-text {
+      font-size: clamp(1rem, 1.5vw, 1.2rem); color: #3a2408;
+      line-height: 2; margin-bottom: 2rem;
+      opacity: 0; transform: translateY(12px);
+      transition: opacity 0.7s ease 1.1s, transform 0.7s ease 1.1s;
+    }
+    .letter-signature {
+      font-style: italic;
+      font-size: clamp(1.1rem, 1.8vw, 1.4rem); color: #5a3010;
+      text-align: right; margin-top: 2rem;
+      opacity: 0; transition: opacity 0.7s ease 1.4s;
+    }
+
+    .letter-expanded.visible .letter-date,
+    .letter-expanded.visible .letter-greeting,
+    .letter-expanded.visible .letter-body-text,
+    .letter-expanded.visible .letter-signature {
+      opacity: 1; transform: translateY(0);
+    }
+
+    .ink-blot {
+      position: absolute; border-radius: 50%;
+      background: rgba(30,15,3,0.08); pointer-events: none;
+    }
+
+    .particle {
+      position: fixed; pointer-events: none; z-index: 200;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,200,80,0.9) 0%, rgba(255,120,20,0.6) 50%, transparent 70%);
+      animation: sparkFly 1s ease-out forwards;
+    }
+    @keyframes sparkFly {
+      0%   { transform: translate(0,0) scale(1); opacity: 1; }
+      100% { transform: translate(var(--sx), var(--sy)) scale(0); opacity: 0; }
+    }
+
+    @media (max-width: 600px) {
+      .envelope-container { width: 320px; height: 218px; }
+      .letter-paper-inner { padding: 2.5rem 2rem; }
+      .letter-paper-inner::after { left: 2.5rem; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="dust" id="dust"></div>
+
+<div class="scene">
+  <div class="envelope-container" id="envelope">
+    <div class="letter-wrapper" id="letterWrapper">
+      <div class="letter-inside" id="letterInside"></div>
+    </div>
+    <div class="envelope-flap" id="flap">
+      <div class="envelope-address">Pour la famille Renjii</div>
+    </div>
+    <div class="envelope-body"></div>
+
+    <!-- SCEAU DE CIRE avec logo Renjii -->
+    <div class="wax-seal" id="waxSeal">
+      <svg viewBox="0 0 80 80" width="68" height="68" style="position:absolute;inset:0;margin:auto;" xmlns="http://www.w3.org/2000/svg">
+        <!-- Cercle de bordure du sceau -->
+        <circle cx="40" cy="40" r="34" fill="none" stroke="rgba(255,220,170,0.55)" stroke-width="1.8"/>
+
+        <!-- Losange HAUT -->
+        <polygon points="40,4 43.5,10 40,16 36.5,10" fill="rgba(255,220,170,0.92)"/>
+        <!-- Losange BAS -->
+        <polygon points="40,76 43.5,70 40,64 36.5,70" fill="rgba(255,220,170,0.92)"/>
+        <!-- Losange GAUCHE -->
+        <polygon points="4,40 10,36.5 16,40 10,43.5" fill="rgba(255,220,170,0.92)"/>
+        <!-- Losange DROITE -->
+        <polygon points="76,40 70,36.5 64,40 70,43.5" fill="rgba(255,220,170,0.92)"/>
+
+        <!-- Ornements latéraux (ailes) HAUT-GAUCHE -->
+        <path d="M18,22 Q14,28 16,34" stroke="rgba(255,210,160,0.85)" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+        <path d="M22,18 Q28,14 34,16" stroke="rgba(255,210,160,0.85)" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+        <!-- Ornements HAUT-DROITE -->
+        <path d="M62,22 Q66,28 64,34" stroke="rgba(255,210,160,0.85)" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+        <path d="M58,18 Q52,14 46,16" stroke="rgba(255,210,160,0.85)" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+        <!-- Ornements BAS-GAUCHE -->
+        <path d="M18,58 Q14,52 16,46" stroke="rgba(255,210,160,0.85)" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+        <path d="M22,62 Q28,66 34,64" stroke="rgba(255,210,160,0.85)" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+        <!-- Ornements BAS-DROITE -->
+        <path d="M62,58 Q66,52 64,46" stroke="rgba(255,210,160,0.85)" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+        <path d="M58,62 Q52,66 46,64" stroke="rgba(255,210,160,0.85)" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+
+        <!-- Spirale centrale — grande boucle extérieure -->
+        <path d="
+          M 40 24
+          C 52 24, 58 30, 58 40
+          C 58 52, 50 58, 40 58
+          C 28 58, 22 50, 22 40
+          C 22 32, 27 27, 34 26
+        " stroke="rgba(255,215,160,0.88)" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+
+        <!-- Spirale — boucle intermédiaire -->
+        <path d="
+          M 40 30
+          C 48 30, 52 34, 52 40
+          C 52 48, 46 52, 40 52
+          C 33 52, 29 47, 29 41
+          C 29 36, 33 32, 38 31
+        " stroke="rgba(255,215,160,0.88)" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+
+        <!-- Spirale — boucle intérieure -->
+        <path d="
+          M 40 35
+          C 44 35, 46 37, 46 40
+          C 46 44, 44 46, 40 46
+          C 36 46, 34 44, 34 41
+          C 34 38, 36 36, 39 36
+        " stroke="rgba(255,215,160,0.88)" stroke-width="2" fill="none" stroke-linecap="round"/>
+
+        <!-- Centre de la spirale (point terminal) -->
+        <circle cx="40" cy="40" r="2.5" fill="rgba(255,215,160,0.9)"/>
+
+        <!-- Queue de la spirale vers le bas-droite -->
+        <path d="M 34 26 Q 30 22 26 25 Q 22 30 24 36"
+          stroke="rgba(255,215,160,0.85)" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+      </svg>
+      <span class="hint">cliquez pour ouvrir</span>
+    </div>
+  </div>
+</div>
+
+<!-- Expanded letter -->
+<div class="letter-expanded" id="letterExpanded">
+  <div class="letter-backdrop" id="letterBackdrop"></div>
+  <div class="letter-paper" id="letterPaper">
+    <div class="letter-paper-inner">
+      <div class="ink-blot" style="width:18px;height:11px;top:8%;right:14%;transform:rotate(25deg)"></div>
+      <div class="ink-blot" style="width:8px;height:8px;bottom:18%;left:8%;opacity:0.6"></div>
+      <div class="ink-blot" style="width:24px;height:9px;bottom:30%;right:10%;transform:rotate(-15deg)"></div>
+
+      <div class="letter-pages">
+        <div class="letter-page active" data-page="1">
+          <p class="letter-date">En ce jour du <em>21 Mai,</em></p>
+          <h1 class="letter-greeting">À la famille Renjii,</h1>
+          <p class="letter-body-text">
+            et plus particulièrement à mes fils, Atsuko et Kuro,
+            <br><br>
+            Si ces mots vous parviennent aujourd'hui, alors mon dernier sceau s'est finalement dissipé. Dans notre clan, la mort n'est jamais une véritable fin. Les corps disparaissent, les voix s'éteignent, mais les marques laissées par le Fuinjutsu continuent de vivre à travers ceux qui héritent de notre sang.
+            <br><br>
+            Depuis des générations, les Renjii vivent dans l'ombre de Konoha, loin des regards et des louanges. Nous sommes les gardiens de connaissances interdites, les protecteurs silencieux d'un équilibre que beaucoup ignorent. Le monde nous craint parce qu'il ne comprend pas notre pouvoir. Pourtant, le véritable Fuinjutsu n'a jamais eu pour vocation de détruire… il existe pour protéger ce qui doit survivre.
+            <br><br>
+            Souvenez-vous toujours de cela :
+            <br>
+            un sceau n'est pas seulement une prison.
+            <br>
+            C'est une promesse.
+            <br><br>
+            Nos cheveux blancs, hérités de l'ancien sceau ancestral, sont la preuve du pacte qui lie notre famille à cet art oublié. Cette puissance nous a offert une immense réserve de chakra, mais elle nous a aussi condamnés à porter un fardeau que peu seraient capables de supporter. Les Renjii ont appris à sceller les créatures, les armes, les émotions et parfois même leurs propres souffrances… car certaines douleurs sont trop dangereuses pour être laissées libres.
+            <br><br>
+            Atsuko…
+            <br>
+            Tu as hérité de ma patience et de mon calme. Derrière ton regard silencieux brûle la même volonté que portaient nos ancêtres. Ne laisse jamais le Fuinjutsu devenir une chaîne. Un sceau existe pour protéger, jamais pour dominer. Beaucoup chercheront à utiliser votre pouvoir par peur ou par ambition. Refuse de devenir l'arme de ceux qui ne comprennent pas ce que signifie porter les cheveux blancs des Renjii.
+          </p>
+        </div>
+
+        <div class="letter-page" data-page="2">
+          <p class="letter-body-text">
+            Kuro…
+            <br><br>
+            Ton cœur brûle avec une intensité que même les anciens auraient redoutée. Mais n'oublie jamais qu'un feu incontrôlé détruit tout sur son passage, alors qu'un feu maîtrisé peut protéger ceux qu'il aime. Ta colère n'est pas une faiblesse tant que tu refuses d'en devenir l'esclave.
+            <br><br>
+            À vous deux, et à tous ceux qui porteront notre nom après moi : ne laissez jamais notre héritage devenir une arme entre de mauvaises mains. Les parchemins interdits qui reposent dans notre demeure existent pour préserver l'équilibre, non pour satisfaire l'ambition des hommes.
+            <br><br>
+            Derrière le troisième mur scellé repose encore le plus ancien héritage des Renjii. Beaucoup convoiteront ce pouvoir, mais aucun ne doit le libérer sans comprendre le prix qu'il exige. Certains sceaux protègent le monde… d'autres protègent le monde de lui-même.
+            <br><br>
+            Notre clan a toujours vécu isolé, caché derrière des barrières invisibles et des règles strictes. Pourtant, cette solitude nous a permis de survivre là où d'autres lignées ont disparu. N'oubliez jamais les enseignements transmis par nos ancêtres :
+            <br><br>
+            Maîtrisez votre cœur avant votre chakra.
+            <br>
+            Respectez les sceaux anciens.
+            <br>
+            Ne brisez jamais une marque dont vous ignorez l'origine.
+            <br>
+            Et surtout… qu'aucun Renjii ne porte seul le poids de notre héritage.
+            <br><br>
+            Je pars désormais rejoindre ceux dont les voix résonnent encore dans les symboles gravés sur nos murs. Mais tant qu'un membre de notre famille tracera un sceau avec conviction, alors la volonté des Renjii continuera de vivre.
+            <br><br>
+            Quand le silence vous semblera trop lourd, écoutez le chakra circuler dans vos veines.
+            <br>
+            C'est là que résident encore nos ancêtres.
+            <br>
+            C'est là… que je resterai auprès de vous.
+          </p>
+          <p class="letter-signature">
+            — Un père.<br>
+            — Un Renjii.
+          </p>
+        </div>
+      </div>
+      <div class="page-controls">
+        <button class="page-btn" id="pageBtn">Tourner la page</button>
+        <span class="page-label" id="pageLabel">Page 1 / 2</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const dustEl = document.getElementById('dust');
+  for (let i = 0; i < 38; i++) {
+    const p = document.createElement('div');
+    p.className = 'dust-particle';
+    p.style.cssText = `left:${Math.random()*100}%;width:${1+Math.random()*3}px;height:${1+Math.random()*3}px;animation-duration:${8+Math.random()*18}s;animation-delay:${-Math.random()*20}s;--drift:${-30+Math.random()*60}px;opacity:${0.2+Math.random()*0.5}`;
+    dustEl.appendChild(p);
+  }
+
+  function spawnSparks(x, y) {
+    for (let i = 0; i < 22; i++) {
+      const s = document.createElement('div');
+      s.className = 'particle';
+      const angle = Math.random() * 2 * Math.PI;
+      const dist = 40 + Math.random() * 90;
+      s.style.cssText = `left:${x}px;top:${y}px;width:${4+Math.random()*7}px;height:${4+Math.random()*7}px;--sx:${Math.cos(angle)*dist}px;--sy:${Math.sin(angle)*dist}px;animation-duration:${0.6+Math.random()*0.8}s`;
+      document.body.appendChild(s);
+      s.addEventListener('animationend', () => s.remove());
+    }
+  }
+
+  const envelope       = document.getElementById('envelope');
+  const flap           = document.getElementById('flap');
+  const waxSeal        = document.getElementById('waxSeal');
+  const letterWrapper  = document.getElementById('letterWrapper');
+  const letterInside   = document.getElementById('letterInside');
+  const letterExpanded = document.getElementById('letterExpanded');
+  const letterPaper    = document.getElementById('letterPaper');
+  const letterBackdrop = document.getElementById('letterBackdrop');
+  const pageBtn        = document.getElementById('pageBtn');
+  const pageLabel      = document.getElementById('pageLabel');
+  const pages          = document.querySelectorAll('.letter-page');
+
+  let isOpen = false;
+  let currentPage = 1;
+
+  function updatePage() {
+    pages.forEach((page, index) => {
+      const isActive = index === currentPage - 1;
+      page.classList.toggle('active', isActive);
+      if (isActive) page.scrollTop = 0;
+    });
+    pageLabel.textContent = `Page ${currentPage} / ${pages.length}`;
+    pageBtn.textContent = currentPage === pages.length ? 'Revenir au recto' : 'Tourner la page';
+  }
+
+  function flipPage() {
+    currentPage = currentPage === pages.length ? 1 : currentPage + 1;
+    updatePage();
+  }
+
+  function openEnvelope() {
+    if (isOpen) return;
+    isOpen = true;
+
+    const rect = waxSeal.getBoundingClientRect();
+    spawnSparks(rect.left + rect.width / 2, rect.top + rect.height / 2);
+    waxSeal.classList.add('broken');
+
+    envelope.style.animation = 'none';
+
+    flap.style.transform  = 'rotateX(-165deg)';
+    flap.style.transition = 'transform 0.9s cubic-bezier(0.4, 0, 0.2, 1)';
+
+    setTimeout(() => {
+      letterInside.style.transition = 'transform 0.8s cubic-bezier(0.2, 0, 0.1, 1)';
+      letterInside.style.transform  = 'translateY(0)';
+    }, 700);
+
+    setTimeout(() => {
+      envelope.style.transition = 'opacity 0.5s ease';
+      envelope.style.opacity    = '0';
+      envelope.style.pointerEvents = 'none';
+
+      currentPage = 1;
+      updatePage();
+      letterExpanded.classList.add('visible');
+    }, 1500);
+  }
+
+  function closeEnvelope() {
+    if (!isOpen) return;
+    isOpen = false;
+
+    letterExpanded.classList.remove('visible');
+
+    setTimeout(() => {
+      envelope.style.opacity = '1';
+      envelope.style.pointerEvents = 'auto';
+      envelope.style.animation = 'gentleFloat 6s ease-in-out infinite';
+
+      flap.style.transition = 'transform 0.7s ease';
+      flap.style.transform  = 'rotateX(0deg)';
+
+      letterInside.style.transition = 'transform 0.6s ease';
+      letterInside.style.transform  = 'translateY(-100%)';
+
+      setTimeout(() => {
+        waxSeal.classList.remove('broken');
+        waxSeal.querySelector('.hint').style.opacity = '1';
+      }, 700);
+    }, 500);
+  }
+
+  waxSeal.addEventListener('click', (e) => { e.stopPropagation(); openEnvelope(); });
+  pageBtn.addEventListener('click', (e) => { e.stopPropagation(); flipPage(); });
+  letterBackdrop.addEventListener('click', closeEnvelope);
+  letterPaper.addEventListener('click', (e) => e.stopPropagation());
+</script>
+</body>
+</html>
